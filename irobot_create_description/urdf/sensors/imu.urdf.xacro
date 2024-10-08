@@ -59,6 +59,9 @@
           </z>
         </linear_acceleration>
       </imu>
+      <xacro:if value="${gazebo == 'ignition'}">
+        <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+      </xacro:if>
       <xacro:if value="${gazebo == 'classic'}">
         <plugin name="${name}_plugin" filename="libgazebo_ros_create_imu.so">
           <ros>

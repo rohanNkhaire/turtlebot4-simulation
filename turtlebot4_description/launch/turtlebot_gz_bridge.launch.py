@@ -46,8 +46,6 @@ ARGUMENTS = [
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     robot_name = LaunchConfiguration('robot_name')
-    dock_name = LaunchConfiguration('dock_name')
-    namespace = LaunchConfiguration('namespace')
     world = LaunchConfiguration('world')
 
      # Clock bridge
@@ -59,6 +57,28 @@ def generate_launch_description():
         arguments=[
                 '/clock' + '@rosgraph_msgs/msg/Clock' + '[gz.msgs.Clock'
                 ])
+    
+    # lidar bridge
+    imu_bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        name='imu_bridge',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time
+        }],
+        arguments=[
+            ['/world/', world,
+             '/model/', robot_name,
+             '/link/imu_link/sensor/imu/imu' +
+             '@sensor_msgs/msg/Imu[gz.msgs.IMU']
+        ],
+        remappings=[
+            (['/world/', world,
+              '/model/', robot_name,
+              '/link/imu_link/sensor/imu/imu'],
+             'imu')
+        ])
 
     # lidar bridge
     lidar_bridge = Node(
@@ -133,6 +153,8 @@ def generate_launch_description():
 
     # Define LaunchDescription variable
     ld = LaunchDescription(ARGUMENTS)
+    ld.add_action(clock_bridge)
+    ld.add_action(imu_bridge)
     ld.add_action(lidar_bridge)
     ld.add_action(oakd_camera_bridge)
     return ld

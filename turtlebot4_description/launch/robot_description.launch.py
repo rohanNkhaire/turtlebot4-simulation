@@ -42,7 +42,7 @@ ARGUMENTS = [
     DeclareLaunchArgument("gazebo_gui", default_value="true", 
                           description="Start gazebo with GUI?"),
     DeclareLaunchArgument("world_file", default_value=PathJoinSubstitution([FindPackageShare("turtlebot4_description"), 
-                                                                            "world", "depot.sdf"]),
+                                                                            "world", "maze.sdf"]),
                           description="Gazebo world file (absolute path or filename from the gazebosim worlds collection) \
                           containing a custom world."),                
 ] 
@@ -81,18 +81,15 @@ def generate_launch_description():
                     'gazebo:=ignition'])}, 
             ]
         ),
-        # Joint State Publisher
+
         Node(
             package='joint_state_publisher',
             executable='joint_state_publisher',
             name='joint_state_publisher',
             output='screen',
             parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
-            remappings=[
-                ('/tf', 'tf'),
-                ('/tf_static', 'tf_static')
-            ]
-        ),
+        )
+
     ])
 
     # Spawn turtlebot
@@ -104,11 +101,22 @@ def generate_launch_description():
         output='screen'
     )
 
+    spawn_controllers_group_action = GroupAction([
+
+        Node(
+            package="controller_manager",
+            executable="spawner",
+            arguments=["diffdrive_controller", "-c", "/controller_manager"],
+            ),
+    ])
+
     # Launch the gz ros bridge
     turtlebot_ros_bridge = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [FindPackageShare("turtlebot4_description"), "/launch/turtlebot_gz_bridge.launch.py"]
         ))
+    
+
 
     # Define LaunchDescription variable
     ld = LaunchDescription(ARGUMENTS)
@@ -120,6 +128,13 @@ def generate_launch_description():
                 period=5.0,
                 actions=[spawn_turtlebot],
             ))
+    # Launch the controllers
+    ld.add_action(RegisterEventHandler(OnProcessExit(
+            target_action=spawn_turtlebot,
+            on_exit=[
+                LogInfo(msg='Spawn finished'),
+                spawn_controllers_group_action
+                ])))
     # Launch the gz ros bridge
     ld.add_action(RegisterEventHandler(OnProcessExit(
             target_action=spawn_turtlebot,
@@ -127,4 +142,5 @@ def generate_launch_description():
                 LogInfo(msg='Spawn finished'),
                 turtlebot_ros_bridge
                 ])))
+
     return ld
